@@ -16,7 +16,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import secrets, datetime
 from core.deps import require_permission
-from utils.webhook import trigger_webhook
 from core.config import Settings
 
 router = APIRouter(tags=["auth"])
