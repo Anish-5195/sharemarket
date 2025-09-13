@@ -33,7 +33,6 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     if existing_mobile:
         raise HTTPException(status_code=400, detail="User with this mobile already exists")
 
-    # backend mein token generate hoga
     verification_token = secrets.token_urlsafe(32)
 
     # create user
@@ -50,46 +49,27 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
+from kafka import KafkaProducer
+import json
 
-# for webhook handler
-# @router.post("/webhook-handler")
-# async def webhook_handler(request: Request):
-#     try:
-#         payload = await request.json()
-#     except Exception:
-#         payload = {}
-#     print("Webhook received:", payload)  
-#     return {"status": "ok"}
+producer = KafkaProducer(
+    bootstrap_servers="localhost:9092", 
+    value_serializer=lambda v: json.dumps(v).encode("utf-8")
+)
 
-
-from models.user import WebhookData
-@router.post("/webhook-handler",include_in_schema=False)
-async def webhook_handler(request: Request, db: Session = Depends(get_db)):
+@router.post("/chartink-webhook")
+async def chartink_webhook(request: Request):
     try:
-        payload = await request.json()
-    except Exception:
-        payload = {}
-    
-    # Print in terminal
-    print("Webhook received:", payload)
-    
-    # Save in DB
-    if payload:
-        webhook_entry = WebhookData(
-            stocks=payload.get("stocks"),
-            trigger_prices=payload.get("trigger_prices"),
-            triggered_at=payload.get("triggered_at"),
-            scan_name=payload.get("scan_name"),
-            scan_url=payload.get("scan_url"),
-            alert_name=payload.get("alert_name"),
-            webhook_url=payload.get("webhook_url"),
-        )
-        db.add(webhook_entry)
-        db.commit()
-        db.refresh(webhook_entry)
-        print(f"Saved to DB with id: {webhook_entry.id}")
-    
-    return {"status": "ok"}
+        data = await request.json()  # Chartink payload
+        print("Received Chartink Alert:", data)
+
+        producer.send("chartink-signals", value=data)
+
+        return {"status": "success"}
+    except Exception as e:
+        print("Error:", e)
+        return {"status": "error", "message": str(e)}
+
 
 
 
