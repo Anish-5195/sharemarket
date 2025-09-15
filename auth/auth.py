@@ -49,26 +49,54 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-from kafka import KafkaProducer
-import json
+# from kafka import KafkaProducer
+# from kafka import KafkaProducer
 
-producer = KafkaProducer(
-    bootstrap_servers="localhost:9092", 
-    value_serializer=lambda v: json.dumps(v).encode("utf-8")
-)
+# import json
 
-@router.post("/chartink-webhook")
+# producer = KafkaProducer(
+#     bootstrap_servers="kafka:9092", 
+#     value_serializer=lambda v: json.dumps(v).encode("utf-8")
+# )
+
+# @router.post("/webhook")
+# async def chartink_webhook(request: Request):
+#     try:
+#         data = await request.json()  
+#         print("Received Chartink Alert:", data)
+
+#         producer.send("chartink-signals", value=data)
+
+#         return {"status": "success"}
+#     except Exception as e:
+#         print("Error:", e)
+#         return {"status": "error", "message": str(e)}
+
+
+producer = None
+
+def get_kafka_producer():
+    global producer
+    if producer is None:
+        from kafka import KafkaProducer
+        import json
+        producer = KafkaProducer(
+            bootstrap_servers="kafka:9092",
+            value_serializer=lambda v: json.dumps(v).encode("utf-8")
+        )
+    return producer
+
+@router.post("/webhook" ,include_in_schema=False)
 async def chartink_webhook(request: Request):
     try:
-        data = await request.json()  # Chartink payload
+        data = await request.json()
         print("Received Chartink Alert:", data)
-
-        producer.send("chartink-signals", value=data)
-
+        get_kafka_producer().send("chartink-signals", value=data)
         return {"status": "success"}
     except Exception as e:
         print("Error:", e)
         return {"status": "error", "message": str(e)}
+
 
 
 

@@ -5,7 +5,7 @@ from core.security import hash_password
 def create_admin():
     db = SessionLocal()
     email = "admin@example1.com"
-    name="swet"
+    name="admin"
     mobile = 9999999998
     password = "Admin@123"
 
